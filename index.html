@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お買い物リスト</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+        }
+        /* スクロールバーのスタイル（モダンブラウザ向け） */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* FAB（フローティングアクションボタン）のスタイル */
+        .fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 10;
+        }
+        /* モーダルのスタイル */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="max-w-2xl mx-auto bg-white min-h-screen shadow-lg">
+        <!-- ヘッダー -->
+        <header class="bg-white shadow-md sticky top-0 z-20 flex justify-between items-center p-4 border-b">
+            <h1 class="text-xl font-bold text-gray-700">お買い物メモ</h1>
+            <button id="show-shopping-list-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                買い物リスト
+            </button>
+        </header>
+
+        <!-- ジャンル別タブ -->
+        <nav class="bg-white sticky top-[73px] z-20 overflow-x-auto whitespace-nowrap custom-scrollbar">
+            <div id="category-tabs" class="flex border-b p-2 space-x-2">
+                <!-- ここにタブが動的に生成されます -->
+            </div>
+        </nav>
+
+        <!-- 品目リスト -->
+        <main id="item-list-container" class="p-4 pb-24">
+            <!-- ここに品目リストが動的に生成されます -->
+        </main>
+
+        <!-- 品目追加ボタン (FAB) -->
+        <button id="add-item-fab" class="fab w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-transform duration-200 transform hover:scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+        </button>
+    </div>
+
+    <!-- モーダルウィンドウ -->
+    <!-- 買い物リスト表示用モーダル -->
+    <div id="shopping-list-modal" class="fixed inset-0 z-30 flex items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-md m-4 transform transition-all duration-300 scale-95 opacity-0" data-modal-panel>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold mb-4">買い物リスト</h2>
+                <div id="shopping-list-content" class="max-h-96 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- リスト内容がここに表示されます -->
+                </div>
+            </div>
+            <div class="bg-gray-100 p-4 rounded-b-lg text-right">
+                <button class="modal-close-btn bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ジャンル追加用モーダル -->
+    <div id="add-category-modal" class="fixed inset-0 z-30 flex items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-md m-4 transform transition-all duration-300 scale-95 opacity-0" data-modal-panel>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold mb-4">新しいジャンルを追加</h2>
+                <input type="text" id="new-category-name" placeholder="ジャンル名" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="bg-gray-100 p-4 rounded-b-lg flex justify-end space-x-2">
+                <button class="modal-close-btn bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">キャンセル</button>
+                <button id="save-category-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">追加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 品目追加用モーダル -->
+    <div id="add-item-modal" class="fixed inset-0 z-30 flex items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-md m-4 transform transition-all duration-300 scale-95 opacity-0" data-modal-panel>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold mb-4">新しい品目を追加</h2>
+                <input type="text" id="new-item-name" placeholder="品目名" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div class="bg-gray-100 p-4 rounded-b-lg flex justify-end space-x-2">
+                <button class="modal-close-btn bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">キャンセル</button>
+                <button id="save-item-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">追加</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const appState = {
+                // アプリケーションの全データを管理
+                data: {
+                    categories: [],
+                    activeCategory: ''
+                },
+                // 初期データ（もしlocalStorageにデータがなければこれを使う）
+                initialData: {
+                    categories: [
+                        {
+                            name: "食料品、飲料",
+                            items: [
+                                { name: "牛乳", quantity: 0 }, { name: "卵", quantity: 0 }, { name: "パン", quantity: 0 },
+                                { name: "豚肉", quantity: 0 }, { name: "鶏肉", quantity: 0 }, { name: "牛肉", quantity: 0 },
+                                { name: "玉ねぎ", quantity: 0 }, { name: "じゃがいも", quantity: 0 }, { name: "にんじん", quantity: 0 },
+                                { name: "お茶", quantity: 0 }, { name: "水", quantity: 0 }, { name: "コーヒー", quantity: 0 }
+                            ]
+                        },
+                        { name: "調理道具", items: [ { name: "ラップ", quantity: 0 }, { name: "アルミホイル", quantity: 0 }, { name: "キッチンペーパー", quantity: 0 } ] },
+                        { name: "電化製品", items: [ { name: "単三電池", quantity: 0 }, { name: "単四電池", quantity: 0 }, { name: "電球", quantity: 0 } ] },
+                        { name: "ウェア", items: [ { name: "靴下", quantity: 0 }, { name: "下着", quantity: 0 }, { name: "Tシャツ", quantity: 0 } ] },
+                        { name: "その他", items: [ { name: "ティッシュ", quantity: 0 }, { name: "トイレットペーパー", quantity: 0 }, { name: "洗剤", quantity: 0 } ] }
+                    ],
+                    activeCategory: '食料品、飲料'
+                },
+
+                // 初期化処理
+                init() {
+                    this.loadData();
+                    this.renderTabs();
+                    this.renderItems();
+                    this.addEventListeners();
+                },
+                
+                // localStorageからデータを読み込む
+                loadData() {
+                    const savedData = localStorage.getItem('shoppingListData');
+                    if (savedData) {
+                        this.data = JSON.parse(savedData);
+                    } else {
+                        this.data = JSON.parse(JSON.stringify(this.initialData)); // Deep copy
+                    }
+                    if (!this.data.activeCategory || !this.data.categories.find(c => c.name === this.data.activeCategory)) {
+                         this.data.activeCategory = this.data.categories[0]?.name || '';
+                    }
+                },
+
+                // localStorageにデータを保存する
+                saveData() {
+                    localStorage.setItem('shoppingListData', JSON.stringify(this.data));
+                },
+
+                // UIの描画関連
+                // タブを描画する
+                renderTabs() {
+                    const tabsContainer = document.getElementById('category-tabs');
+                    tabsContainer.innerHTML = '';
+                    this.data.categories.forEach(category => {
+                        const isActive = category.name === this.data.activeCategory;
+                        const tab = document.createElement('button');
+                        tab.textContent = category.name;
+                        tab.dataset.categoryName = category.name;
+                        tab.className = `px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${isActive ? 'bg-blue-500 text-white shadow' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`;
+                        tabsContainer.appendChild(tab);
+                    });
+
+                    // ジャンル追加ボタン
+                    const addCategoryTab = document.createElement('button');
+                    addCategoryTab.id = 'add-category-btn';
+                    addCategoryTab.textContent = '+';
+                    addCategoryTab.className = 'flex-shrink-0 w-10 h-10 bg-gray-300 text-gray-700 hover:bg-gray-400 font-bold rounded-full transition-colors duration-200';
+                    tabsContainer.appendChild(addCategoryTab);
+                },
+
+                // 品目リストを描画する
+                renderItems() {
+                    const itemsContainer = document.getElementById('item-list-container');
+                    const activeCategoryData = this.data.categories.find(c => c.name === this.data.activeCategory);
+                    if (!activeCategoryData) {
+                        itemsContainer.innerHTML = '<p class="text-gray-500">ジャンルを選択してください。</p>';
+                        return;
+                    }
+
+                    itemsContainer.innerHTML = activeCategoryData.items.length === 0 
+                        ? '<p class="text-gray-500">品目がありません。右下の「+」ボタンから追加してください。</p>'
+                        : '';
+
+                    activeCategoryData.items.forEach(item => {
+                        const hasQuantity = item.quantity > 0;
+                        const itemEl = document.createElement('div');
+                        itemEl.className = `flex justify-between items-center p-3 rounded-lg mb-2 transition-all duration-200 ${hasQuantity ? 'bg-red-50' : 'bg-gray-50'}`;
+                        itemEl.innerHTML = `
+                            <span class="item-name text-lg ${hasQuantity ? 'text-red-600 font-semibold' : ''}">${item.name}</span>
+                            <div class="flex items-center space-x-3">
+                                <button data-item-name="${item.name}" data-action="decrease" class="quantity-btn w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-xl font-bold transition-colors duration-200">-</button>
+                                <span class="quantity w-8 text-center text-lg font-mono">${hasQuantity ? item.quantity : '-'}</span>
+                                <button data-item-name="${item.name}" data-action="increase" class="quantity-btn w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-xl font-bold transition-colors duration-200">+</button>
+                            </div>
+                        `;
+                        itemsContainer.appendChild(itemEl);
+                    });
+                },
+
+                // 買い物リストモーダルの中身を描画する
+                renderShoppingList() {
+                    const contentEl = document.getElementById('shopping-list-content');
+                    const shoppingList = [];
+                    this.data.categories.forEach(category => {
+                        category.items.forEach(item => {
+                            if (item.quantity > 0) {
+                                shoppingList.push({ ...item, category: category.name });
+                            }
+                        });
+                    });
+
+                    if (shoppingList.length === 0) {
+                        contentEl.innerHTML = '<p class="text-gray-500">買い物リストは空です。</p>';
+                        return;
+                    }
+                    
+                    contentEl.innerHTML = `
+                        <ul class="space-y-2">
+                            ${shoppingList.map(item => `
+                                <li class="flex justify-between items-center border-b pb-2">
+                                    <span class="text-lg">${item.name}</span>
+                                    <span class="font-bold text-lg text-blue-600">${item.quantity}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                },
+                
+                // イベントリスナーの登録
+                addEventListeners() {
+                    const tabsContainer = document.getElementById('category-tabs');
+                    const itemsContainer = document.getElementById('item-list-container');
+
+                    // タブのクリック
+                    tabsContainer.addEventListener('click', e => {
+                        if (e.target.dataset.categoryName) {
+                            this.data.activeCategory = e.target.dataset.categoryName;
+                            this.renderTabs();
+                            this.renderItems();
+                            this.saveData();
+                        } else if (e.target.id === 'add-category-btn') {
+                            this.showModal('add-category-modal');
+                        }
+                    });
+
+                    // 数量の増減
+                    itemsContainer.addEventListener('click', e => {
+                        const button = e.target.closest('.quantity-btn');
+                        if (!button) return;
+
+                        const itemName = button.dataset.itemName;
+                        const action = button.dataset.action;
+                        const category = this.data.categories.find(c => c.name === this.data.activeCategory);
+                        const item = category.items.find(i => i.name === itemName);
+
+                        if (action === 'increase') {
+                            item.quantity++;
+                        } else if (action === 'decrease' && item.quantity > 0) {
+                            item.quantity--;
+                        }
+                        this.renderItems();
+                        this.saveData();
+                    });
+
+                    // モーダル関連のイベント
+                    document.getElementById('show-shopping-list-btn').addEventListener('click', () => {
+                        this.renderShoppingList();
+                        this.showModal('shopping-list-modal');
+                    });
+                    
+                    document.getElementById('add-item-fab').addEventListener('click', () => {
+                        this.showModal('add-item-modal');
+                    });
+                    
+                    document.querySelectorAll('.modal-close-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                           this.hideModal(btn.closest('.modal-backdrop'));
+                        });
+                    });
+
+                    document.getElementById('save-category-btn').addEventListener('click', () => {
+                        const input = document.getElementById('new-category-name');
+                        const newName = input.value.trim();
+                        if (newName && !this.data.categories.find(c => c.name === newName)) {
+                            this.data.categories.push({ name: newName, items: [] });
+                            this.data.activeCategory = newName;
+                            this.renderTabs();
+                            this.renderItems();
+                            this.saveData();
+                            this.hideModal(document.getElementById('add-category-modal'));
+                            input.value = '';
+                        } else if (newName) {
+                            alert('同じ名前のジャンルが既に存在します。');
+                        }
+                    });
+
+                    document.getElementById('save-item-btn').addEventListener('click', () => {
+                        const input = document.getElementById('new-item-name');
+                        const newName = input.value.trim();
+                        const category = this.data.categories.find(c => c.name === this.data.activeCategory);
+
+                        if (newName && category && !category.items.find(i => i.name === newName)) {
+                            category.items.push({ name: newName, quantity: 0 });
+                            this.renderItems();
+                            this.saveData();
+                            this.hideModal(document.getElementById('add-item-modal'));
+                            input.value = '';
+                        } else if (newName) {
+                           alert('同じ名前の品目が既に存在します。');
+                        }
+                    });
+                },
+
+                // モーダルの表示/非表示
+                showModal(modalId) {
+                    const modal = document.getElementById(modalId);
+                    modal.classList.remove('hidden');
+                    // アニメーションのため少し遅延させる
+                    setTimeout(() => {
+                        modal.querySelector('[data-modal-panel]').classList.remove('scale-95', 'opacity-0');
+                        modal.querySelector('[data-modal-panel]').classList.add('scale-100', 'opacity-100');
+                        if (modal.querySelector('input')) {
+                           modal.querySelector('input').focus();
+                        }
+                    }, 10);
+                },
+
+                hideModal(modal) {
+                    modal.querySelector('[data-modal-panel]').classList.add('scale-95', 'opacity-0');
+                    modal.querySelector('[data-modal-panel]').classList.remove('scale-100', 'opacity-100');
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        const input = modal.querySelector('input');
+                        if (input) input.value = '';
+                    }, 300); // transition duration
+                }
+            };
+
+            appState.init();
+        });
+    </script>
+</body>
+</html>

@@ -45,9 +45,15 @@
         <!-- ヘッダー -->
         <header class="bg-white shadow-md sticky top-0 z-20 flex justify-between items-center p-4 border-b">
             <h1 class="text-xl font-bold text-gray-700">お買い物メモ</h1>
-            <button id="show-shopping-list-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
-                買い物リスト
-            </button>
+            <div class="flex items-center space-x-2">
+                <!-- リセットボタン -->
+                <button id="reset-all-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-3 text-sm rounded-lg transition-colors duration-200">
+                    リセット
+                </button>
+                <button id="show-shopping-list-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                    買い物リスト
+                </button>
+            </div>
         </header>
 
         <!-- ジャンル別タブ -->
@@ -115,6 +121,21 @@
             </div>
         </div>
     </div>
+
+    <!-- リセット確認用モーダル -->
+    <div id="reset-confirm-modal" class="fixed inset-0 z-30 flex items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-md m-4 transform transition-all duration-300 scale-95 opacity-0" data-modal-panel>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold mb-2">確認</h2>
+                <p>買い物リストをすべてリセットします。よろしいですか？</p>
+            </div>
+            <div class="bg-gray-100 p-4 rounded-b-lg flex justify-end space-x-2">
+                <button class="modal-close-btn bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">キャンセル</button>
+                <button id="confirm-reset-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">リセット</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -284,6 +305,23 @@
                         }
                         this.renderItems();
                         this.saveData();
+                    });
+
+                    // リセットボタンのクリック
+                    document.getElementById('reset-all-btn').addEventListener('click', () => {
+                        this.showModal('reset-confirm-modal');
+                    });
+
+                    // リセット確認モーダルの確定ボタン
+                    document.getElementById('confirm-reset-btn').addEventListener('click', () => {
+                        this.data.categories.forEach(category => {
+                            category.items.forEach(item => {
+                                item.quantity = 0;
+                            });
+                        });
+                        this.renderItems();
+                        this.saveData();
+                        this.hideModal(document.getElementById('reset-confirm-modal'));
                     });
 
                     // モーダル関連のイベント
